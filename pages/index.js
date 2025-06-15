@@ -1,10 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { PhoneIcon, TruckIcon, MapPinIcon, GiftIcon, ClipboardIcon, ChevronDownIcon, ChevronUpIcon, EnvelopeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { motion, useAnimation } from 'framer-motion';
-import { ArrowRightIcon } from '@heroicons/react/24/solid';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFacebookF, faXTwitter, faLinkedinIn} from "@fortawesome/free-brands-svg-icons";
+import { faFacebookF, faXTwitter, faLinkedinIn } from "@fortawesome/free-brands-svg-icons";
 import { faMapMarkerAlt, faPhoneAlt, faEnvelope } from '@fortawesome/free-solid-svg-icons';
 
 export default function Home() {
@@ -12,7 +10,8 @@ export default function Home() {
   const [form, setForm] = useState({ contact: '', vehicle: '', address: '' });
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const [showModal, setShowModal] = useState(false); // <-- Added modal state
+  const [showModal, setShowModal] = useState(false);
+  const [openIndex, setOpenIndex] = useState(null);
 
   const faqs = [
     {
@@ -37,8 +36,6 @@ export default function Home() {
     }
   ];
 
-  const [openIndex, setOpenIndex] = useState(null);
-
   const toggleFAQ = (index) => {
     setOpenIndex(openIndex === index ? null : index);
   };
@@ -56,50 +53,35 @@ export default function Home() {
   }, [inView, controls]);
 
   useEffect(() => {
-    const header = document.getElementById('main-header');
-    function handleScroll() {
-      if (window.scrollY > 10) {
-        header.classList.add('backdrop-blur-sm', 'bg-white/70', 'shadow-md');
-      } else {
-        header.classList.remove('backdrop-blur-sm', 'bg-white/70', 'shadow-md');
-      }
-    }
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    fetch('https://stg-cashforcarrotoruaconz-staging.kinsta.cloud/wp-json/wp/v2/posts')
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(posts => {
+        const mapped = posts.map(post => ({
+          id: post.id,
+          title: post.title.rendered,
+          description: post.excerpt.rendered.replace(/<[^>]+>/g, ''), // strip html tags
+        }));
+        setData(mapped);
+      })
+      .catch(error => {
+        console.error("Failed to fetch WordPress posts:", error);
+        setData([
+          {
+            id: 1,
+            title: 'Cash for Cars Rotorua',
+            description: 'We buy unwanted cars, utes, and trucks in Rotorua and pay top dollar!',
+          },
+          {
+            id: 2,
+            title: 'Free Car Removal',
+            description: 'Get your vehicle picked up for free and paid instantly.',
+          },
+        ]);
+      });
   }, []);
-
-  useEffect(() => {
-  fetch('https://stg-cashforcarrotoruaconz-staging.kinsta.cloud/wp-json/wp/v2/posts')
-    .then((res) => {
-      if (!res.ok) throw new Error('Network response was not ok');
-      return res.json();
-    })
-    .then((posts) => {
-      const mapped = posts.map((post) => ({
-        id: post.id,
-        title: post.title.rendered,
-        description: post.excerpt.rendered.replace(/<[^>]+>/g, ''), // Remove HTML tags
-      }));
-      setData(mapped);
-    })
-    .catch((error) => {
-      console.error("Failed to fetch WordPress posts:", error);
-      // fallback data (optional)
-      setData([
-        {
-          id: 1,
-          title: 'Cash for Cars Rotorua',
-          description: 'We buy unwanted cars, utes, and trucks in Rotorua and pay top dollar!',
-        },
-        {
-          id: 2,
-          title: 'Free Car Removal',
-          description: 'Get your vehicle picked up for free and paid instantly.',
-        },
-      ]);
-    });
-}, []);
-
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -121,10 +103,8 @@ export default function Home() {
       setErrors(validationErrors);
       return;
     }
-
     setSubmitted(true);
     setForm({ contact: '', vehicle: '', address: '' });
-
     setTimeout(() => setSubmitted(false), 4000);
   };
 
@@ -154,7 +134,20 @@ export default function Home() {
           </button>
         </div>
       </header>
-
+ {/* WordPress Posts Section */}
+      <section>
+        <h1 className="text-3xl font-bold mb-6">Latest Posts</h1>
+        {data.length === 0 ? (
+          <p>Loading posts...</p>
+        ) : (
+          data.map(({ id, title, description }) => (
+            <article key={id} className="mb-6 border-b pb-4">
+              <h2 className="text-xl font-semibold mb-2" dangerouslySetInnerHTML={{ __html: title }} />
+              <p>{description}</p>
+            </article>
+          ))
+        )}
+      </section>
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto transition-all duration-300">
